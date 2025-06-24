@@ -1,0 +1,346 @@
+{
+  "restaurant": {
+    "name": "Restuarant & Cafe",
+    "address": "Simalchour-8, Pokhara",
+    "contact": {
+      "phone": "9827103558",
+      "email": "restaurant@gmail.com"
+    },
+    "hours": {
+      "Monday": "11:00 AM - 10:00 PM",
+      "Tuesday": "11:00 AM - 10:00 PM",
+      "Wednesday": "11:00 AM - 10:00 PM",
+      "Thursday": "11:00 AM - 10:00 PM",
+      "Friday": "11:00 AM - 11:00 PM",
+      "Saturday": "10:00 AM - 11:00 PM",
+      "Sunday": "10:00 AM - 9:00 PM"
+    }
+  },
+  "menu": {
+    "categories": [
+      {
+        "name": "Appetizers",
+        "items": [
+          {
+            "id": "APP1",
+            "name": "Bruschetta",
+            "description": "Toasted bread topped with fresh tomatoes, basil, and olive oil.",
+            "price": 8.99,
+            "is_vegetarian": true,
+            "is_gluten_free": false
+          },
+          {
+            "id": "APP2",
+            "name": "Chicken Wings",
+            "description": "Spicy buffalo wings served with blue cheese dip.",
+            "price": 10.99,
+            "is_vegetarian": false,
+            "is_gluten_free": false
+          },
+          {
+            "id": "APP3",
+            "name": "Stuffed Jalapeños",
+            "description": "Jalapeño peppers stuffed with cream cheese and wrapped in bacon.",
+            "price": 9.49,
+            "is_vegetarian": false,
+            "is_gluten_free": true
+          },
+          {
+            "id": "APP4",
+            "name": "Spring Rolls",
+            "description": "Crispy rolls filled with vegetables and served with sweet chili sauce.",
+            "price": 7.49,
+            "is_vegetarian": true,
+            "is_gluten_free": false
+          }
+        ]
+      },
+      {
+        "name": "Main Courses",
+        "items": [
+          {
+            "id": "MAIN1",
+            "name": "Grilled Salmon",
+            "description": "Fresh salmon fillet grilled with lemon herb sauce.",
+            "price": 22.99,
+            "is_vegetarian": false,
+            "is_gluten_free": true
+          },
+          {
+            "id": "MAIN2",
+            "name": "Vegetable Stir-Fry",
+            "description": "Mixed vegetables in a savory soy-ginger sauce, served with rice.",
+            "price": 16.99,
+            "is_vegetarian": true,
+            "is_gluten_free": true
+          },
+          {
+            "id": "MAIN3",
+            "name": "Beef Tenderloin",
+            "description": "Juicy beef tenderloin with red wine reduction and mashed potatoes.",
+            "price": 28.99,
+            "is_vegetarian": false,
+            "is_gluten_free": true
+          },
+          {
+            "id": "MAIN4",
+            "name": "Mushroom Risotto",
+            "description": "Creamy arborio rice with wild mushrooms and parmesan.",
+            "price": 18.99,
+            "is_vegetarian": true,
+            "is_gluten_free": true
+          }
+        ]
+      },
+      {
+        "name": "Desserts",
+        "items": [
+          {
+            "id": "DES1",
+            "name": "Chocolate Lava Cake",
+            "description": "Warm chocolate cake with a molten center, served with vanilla ice cream.",
+            "price": 7.99,
+            "is_vegetarian": true,
+            "is_gluten_free": false
+          },
+          {
+            "id": "DES2",
+            "name": "Fruit Sorbet",
+            "description": "Refreshing mango and raspberry sorbet.",
+            "price": 5.99,
+            "is_vegetarian": true,
+            "is_gluten_free": true
+          },
+          {
+            "id": "DES3",
+            "name": "Cheesecake",
+            "description": "Classic New York-style cheesecake with berry compote.",
+            "price": 6.99,
+            "is_vegetarian": true,
+            "is_gluten_free": false
+          }
+        ]
+      },
+      {
+        "name": "Beverages",
+        "items": [
+          {
+            "id": "BEV1",
+            "name": "Fresh Lemonade",
+            "description": "House-made lemonade with fresh lemons and mint.",
+            "price": 3.99,
+            "is_vegetarian": true,
+            "is_gluten_free": true
+          },
+          {
+            "id": "BEV2",
+            "name": "Espresso",
+            "description": "Rich, aromatic espresso shot.",
+            "price": 2.99,
+            "is_vegetarian": true,
+            "is_gluten_free": true
+          },
+          {
+            "id": "BEV3",
+            "name": "Mango Smoothie",
+            "description": "Blended mango, yogurt, and honey smoothie.",
+            "price": 5.49,
+            "is_vegetarian": true,
+            "is_gluten_free": true
+          }
+        ]
+      }
+    ]
+  },
+  "top_selling_items": [
+    {
+      "item_id": "MAIN1",
+      "name": "Grilled Salmon",
+      "sales_count": 250
+    },
+    {
+      "item_id": "DES1",
+      "name": "Chocolate Lava Cake",
+      "sales_count": 200
+    },
+    {
+      "item_id": "APP2",
+      "name": "Chicken Wings",
+      "sales_count": 180
+    },
+    {
+      "item_id": "MAIN3",
+      "name": "Beef Tenderloin",
+      "sales_count": 150
+    },
+    {
+      "item_id": "BEV1",
+      "name": "Fresh Lemonade",
+      "sales_count": 120
+    }
+  ],
+  "offers": [
+    {
+      "id": "OFFER1",
+      "name": "Family Meal Deal",
+      "description": "2 Main Courses, 2 Appetizers, and 1 Dessert for $45.",
+      "price": 45.00,
+      "valid_until": "2025-12-31"
+    },
+    {
+      "id": "OFFER2",
+      "name": "Lunch Special",
+      "description": "Any Main Course + Drink for $15, available Mon-Fri, 11 AM - 3 PM.",
+      "price": 15.00,
+      "valid_until": "2025-12-31"
+    },
+    {
+      "id": "OFFER3",
+      "name": "Weekend Brunch",
+      "description": "Any Main Course + Beverage + Dessert for $20, available Sat-Sun, 10 AM - 2 PM.",
+      "price": 20.00,
+      "valid_until": "2025-12-31"
+    },
+    {
+      "id": "OFFER4",
+      "name": "Happy Hour",
+      "description": "50% off all Appetizers and Beverages, Mon-Thu, 4 PM - 6 PM.",
+      "price": 0.00,
+      "valid_until": "2025-12-31"
+    }
+  ],
+  "orders": [
+    {
+      "order_id": "ORD123",
+      "customer_name": "John Doe",
+      "table_number": 5,
+      "items": [
+        {
+          "item_id": "MAIN1",
+          "quantity": 1,
+          "price": 22.99
+        },
+        {
+          "item_id": "DES1",
+          "quantity": 1,
+          "price": 7.99
+        }
+      ],
+      "total": 30.98,
+      "status": "Completed",
+      "timestamp": "2025-06-22T19:30:00Z"
+    },
+    {
+      "order_id": "ORD124",
+      "customer_name": "Jane Smith",
+      "table_number": 3,
+      "items": [
+        {
+          "item_id": "APP2",
+          "quantity": 2,
+          "price": 10.99
+        },
+        {
+          "item_id": "MAIN2",
+          "quantity": 1,
+          "price": 16.99
+        }
+      ],
+      "total": 38.97,
+      "status": "In Progress",
+      "timestamp": "2025-06-23T12:15:00Z"
+    },
+    {
+      "order_id": "ORD125",
+      "customer_name": "Michael Brown",
+      "table_number": 7,
+      "items": [
+        {
+          "item_id": "MAIN3",
+          "quantity": 1,
+          "price": 28.99
+        },
+        {
+          "item_id": "BEV1",
+          "quantity": 2,
+          "price": 3.99
+        },
+        {
+          "item_id": "DES3",
+          "quantity": 1,
+          "price": 6.99
+        }
+      ],
+      "total": 43.96,
+      "status": "Completed",
+      "timestamp": "2025-06-23T20:00:00Z"
+    },
+    {
+      "order_id": "ORD126",
+      "customer_name": "Emma Davis",
+      "table_number": 2,
+      "items": [
+        {
+          "item_id": "APP3",
+          "quantity": 1,
+          "price": 9.49
+        },
+        {
+          "item_id": "MAIN4",
+          "quantity": 1,
+          "price": 18.99
+        },
+        {
+          "item_id": "BEV3",
+          "quantity": 1,
+          "price": 5.49
+        }
+      ],
+      "total": 33.97,
+      "status": "In Progress",
+      "timestamp": "2025-06-23T13:45:00Z"
+    }
+  ],
+  "reservations": [
+    {
+      "reservation_id": "RES123",
+      "customer_name": "Alice Johnson",
+      "party_size": 4,
+      "date": "2025-06-25",
+      "time": "19:00",
+      "status": "Confirmed"
+    },
+    {
+      "reservation_id": "RES124",
+      "customer_name": "Bob Williams",
+      "party_size": 2,
+      "date": "2025-06-26",
+      "time": "18:30",
+      "status": "Pending"
+    },
+    {
+      "reservation_id": "RES125",
+      "customer_name": "Sarah Lee",
+      "party_size": 6,
+      "date": "2025-06-27",
+      "time": "20:00",
+      "status": "Confirmed"
+    },
+    {
+      "reservation_id": "RES126",
+      "customer_name": "David Kim",
+      "party_size": 3,
+      "date": "2025-06-28",
+      "time": "17:30",
+      "status": "Pending"
+    },
+    {
+      "reservation_id": "RES127",
+      "customer_name": "Lisa Chen",
+      "party_size": 5,
+      "date": "2025-06-29",
+      "time": "19:30",
+      "status": "Confirmed"
+    }
+  ]
+}

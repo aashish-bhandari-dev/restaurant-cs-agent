@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "Restaurant Agent"
+version = "0.1.0"
+description = "A FastAPI project using OpenAI agents"
+authors = ["Sandesh Bhandari <sandeshbhandari1000@gmail.com>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+openai-agents = "*"
+pydantic = "^2.0"
+fastapi = "^0.110.0"
+uvicorn = "^0.29.0"
+python-dotenv = "^1.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
