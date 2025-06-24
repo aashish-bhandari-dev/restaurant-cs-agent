@@ -13,24 +13,55 @@ services:
       - REDIS_PORT=6379
       - REDIS_DB=0
     volumes:
-      - .:/app  
+      - .:/app
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
     restart: unless-stopped
-    command: ["poetry", "run", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks:
+      - restaurant-agent-network
 
   redis:
-    image: redis:7.0-alpine
+    image: redis:7-alpine
     container_name: restaurant-agent-redis
     ports:
-      - "6379:6379"  
+      - "6379:6379"
     volumes:
-      - redis-data:/data 
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "PING"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
     restart: unless-stopped
+    networks:
+      - restaurant-agent-network
+
+  migration:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: restaurant-agent-migration
+    container_name: restaurant-agent-migration
+    environment:
+      - PYTHONPATH=/app
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["poetry", "run", "python", "migrate_to_redis.py"]
+    networks:
+      - restaurant-agent-network
 
 networks:
-  default:
-    name: restaurant-agent-network
+  restaurant-agent-network:
     driver: bridge
 
 volumes:

@@ -19,21 +19,11 @@ from agents import (
     input_guardrail,
 )
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
+from redis_client import redis_client
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-# Load restaurant data with error handling
-try:
-    if not os.path.exists("restaurant_data.json"):
-        raise FileNotFoundError("restaurant_data.json not found in the current directory")
-    with open("restaurant_data.json", "r") as f:
-        RESTAURANT_DATA = json.load(f)
-    logger.debug("Successfully loaded restaurant_data.json")
-except Exception as e:
-    logger.error("Failed to load restaurant_data.json: %s", e)
-    raise
 
 # =========================
 # MODELS
@@ -80,7 +70,7 @@ async def menu_lookup_tool(query: str) -> str:
         # Handle queries explicitly asking for categories
         if "categories" in q:
             logger.debug("Returning only menu categories")
-            categories = [category["name"] for category in RESTAURANT_DATA["menu"]["categories"]]
+            categories = redis_client.get_menu_categories()
             result = "\n".join(categories) if categories else "No menu categories available."
             logger.debug("menu_lookup_tool result: %s", result)
             return result
@@ -88,7 +78,8 @@ async def menu_lookup_tool(query: str) -> str:
         # Handle generic queries like "menu", "menu list", or empty query
         if not q or q in ["menu", "menu list", "full menu", "list", "all"]:
             logger.debug("Returning full menu for generic query")
-            for category in RESTAURANT_DATA["menu"]["categories"]:
+            menu = redis_client.get_menu()
+            for category in menu["categories"]:
                 response.append(f"Category: {category['name']}")
                 for item in category["items"]:
                     response.append(
@@ -101,7 +92,8 @@ async def menu_lookup_tool(query: str) -> str:
             return result
 
         # Existing logic for specific queries
-        for category in RESTAURANT_DATA["menu"]["categories"]:
+        menu = redis_client.get_menu()
+        for category in menu["categories"]:
             if q in category["name"].lower():
                 response.append(f"Category: {category['name']}")
                 for item in category["items"]:
@@ -140,20 +132,13 @@ async def place_order_tool(
         for order_item in items:
             item_id = order_item.item_id
             quantity = order_item.quantity
-            found = False
-            for category in RESTAURANT_DATA["menu"]["categories"]:
-                for menu_item in category["items"]:
-                    if menu_item["id"] == item_id:
-                        price = menu_item["price"] * quantity
-                        total += price
-                        order_items.append({"item_id": item_id, "quantity": quantity, "price": menu_item["price"]})
-                        found = True
-                        break
-                if found:
-                    break
-            if not found:
+            menu_item = redis_client.get_menu_item(item_id)
+            if not menu_item:
                 logger.warning("Item ID %s not found in menu", item_id)
                 return f"Item ID {item_id} not found in menu."
+            price = menu_item["price"] * quantity
+            total += price
+            order_items.append({"item_id": item_id, "quantity": quantity, "price": menu_item["price"]})
         context.context.order_id = order_id
         context.context.table_number = table_number
         new_order = {
@@ -165,9 +150,7 @@ async def place_order_tool(
             "status": "In Progress",
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
-        RESTAURANT_DATA["orders"].append(new_order)
-        with open("restaurant_data.json", "w") as f:
-            json.dump(RESTAURANT_DATA, f, indent=2)
+        redis_client.add_order(new_order)
         logger.debug("Order %s placed: %s", order_id, new_order)
         return f"Order {order_id} placed successfully. Total: ${total:.2f}"
     except Exception as e:
@@ -181,14 +164,14 @@ async def order_status_tool(order_id: str) -> str:
     """Check the status of an order."""
     logger.debug("order_status_tool called with order_id: %s", order_id)
     try:
-        for order in RESTAURANT_DATA["orders"]:
-            if order["order_id"] == order_id:
-                items = "\n".join([f"- {item['item_id']} (Qty: {item['quantity']}, ${item['price']:.2f})" for item in order["items"]])
-                result = f"Order {order_id} is {order['status']}.\nCustomer: {order['customer_name']}\nTable: {order['table_number']}\nItems:\n{items}\nTotal: ${order['total']:.2f}\nPlaced: {order['timestamp']}"
-                logger.debug("order_status_tool result: %s", result)
-                return result
-        logger.warning("Order %s not found", order_id)
-        return f"Order {order_id} not found."
+        order = redis_client.get_order(order_id)
+        if not order:
+            logger.warning("Order %s not found", order_id)
+            return f"Order {order_id} not found."
+        items = "\n".join([f"- {item['item_id']} (Qty: {item['quantity']}, ${item['price']:.2f})" for item in order["items"]])
+        result = f"Order {order_id} is {order['status']}.\nCustomer: {order['customer_name']}\nTable: {order['table_number']}\nItems:\n{items}\nTotal: ${order['total']:.2f}\nPlaced: {order['timestamp']}"
+        logger.debug("order_status_tool result: %s", result)
+        return result
     except Exception as e:
         logger.error("Error in order_status_tool: %s", e)
         return "Error retrieving order status."
@@ -200,8 +183,9 @@ async def offers_lookup_tool() -> str:
     """Lookup current restaurant offers."""
     logger.debug("offers_lookup_tool called")
     try:
+        offers = redis_client.get_offers()
         response = []
-        for offer in RESTAURANT_DATA["offers"]:
+        for offer in offers:
             response.append(f"{offer['name']} (ID: {offer['id']}): {offer['description']} (${offer['price']:.2f}) Valid until {offer['valid_until']}")
         result = "\n".join(response) if response else "No offers available."
         logger.debug("offers_lookup_tool result: %s", result)
@@ -215,46 +199,22 @@ async def offers_lookup_tool() -> str:
     description_override="Get the top-selling menu items across all categories, with an option to specify the number of items or a specific position."
 )
 async def top_selling_items_tool(number: int = 1, position: Optional[int] = None) -> str:
-    """Get the top-selling menu items across all categories.
-    
-    Args:
-        number: Number of top-selling items to return (default is 1).
-        position: If specified, return the item at this specific position (1-based index).
-    
-    Returns:
-        A string listing the top-selling items or the item at the specified position.
-    """
+    """Get the top-selling menu items across all categories."""
     logger.debug("top_selling_items_tool called with number=%s, position=%s", number, position)
     try:
-        if not RESTAURANT_DATA.get("top_selling_items"):
-            logger.warning("No top-selling items data available")
+        items = redis_client.get_top_selling_items(number=number, position=position)
+        if not items:
+            logger.warning("No top-selling items available")
             return "No top-selling items available."
         
-        # Sort items by sales count in descending order
-        sorted_items = sorted(
-            RESTAURANT_DATA["top_selling_items"],
-            key=lambda x: x.get("sales_count", 0),
-            reverse=True
-        )
-        
         if position is not None:
-            # Handle request for a specific position (1-based index)
-            if position < 1 or position > len(sorted_items):
-                logger.warning("Invalid position %s requested", position)
-                return f"No item found at position {position}."
-            top_item = sorted_items[position - 1]
-            result = f"The #{position} top-selling item is {top_item['name']} with {top_item['sales_count']} sales."
+            item = items[0]
+            result = f"The #{position} top-selling item is {item['name']} with {item['sales_count']} sales."
             logger.debug("top_selling_items_tool result: %s", result)
             return result
         
-        # Return top N items
-        number = min(number, len(sorted_items))  # Ensure we don't exceed available items
-        if number <= 0:
-            logger.warning("Invalid number of items requested: %s", number)
-            return "No top-selling items available."
-        
         response = []
-        for i, item in enumerate(sorted_items[:number], 1):
+        for i, item in enumerate(items, 1):
             response.append(f"#{i}: {item['name']} with {item['sales_count']} sales")
         
         result = "\n".join(response) if response else "No top-selling items available."
@@ -271,11 +231,11 @@ async def restaurant_info_tool() -> str:
     """Get restaurant information."""
     logger.debug("restaurant_info_tool called")
     try:
-        restaurant = RESTAURANT_DATA["restaurant"]
+        restaurant = redis_client.get_restaurant_info()
         hours = "\n".join([f"{day}: {time}" for day, time in restaurant["hours"].items()])
         result = (
             f"Restaurant: {restaurant['name']}\n"
-            f"Address!!!!Address: {restaurant['address']}\n"
+            f"Address: {restaurant['address']}\n"
             f"Phone: {restaurant['contact']['phone']}\n"
             f"Email: {restaurant['contact']['email']}\n"
             f"Hours:\n{hours}"
@@ -306,9 +266,7 @@ async def make_reservation_tool(
             "time": time,
             "status": "Confirmed"
         }
-        RESTAURANT_DATA["reservations"].append(new_reservation)
-        with open("restaurant_data.json", "w") as f:
-            json.dump(RESTAURANT_DATA, f, indent=2)
+        redis_client.add_reservation(new_reservation)
         logger.debug("Reservation %s created: %s", reservation_id, new_reservation)
         return f"Reservation {reservation_id} confirmed for {name} on {date} at {time} for {party_size} people."
     except Exception as e:
@@ -322,15 +280,13 @@ async def cancel_reservation_tool(reservation_id: str) -> str:
     """Cancel a reservation."""
     logger.debug("cancel_reservation_tool called with reservation_id: %s", reservation_id)
     try:
-        for reservation in RESTAURANT_DATA["reservations"]:
-            if reservation["reservation_id"] == reservation_id:
-                reservation["status"] = "Cancelled"
-                with open("restaurant_data.json", "w") as f:
-                    json.dump(RESTAURANT_DATA, f, indent=2)
-                logger.debug("Reservation %s cancelled", reservation_id)
-                return f"Reservation {reservation_id} cancelled successfully."
-        logger.warning("Reservation %s not found", reservation_id)
-        return f"Reservation {reservation_id} not found."
+        reservation = redis_client.get_reservation(reservation_id)
+        if not reservation:
+            logger.warning("Reservation %s not found", reservation_id)
+            return f"Reservation {reservation_id} not found."
+        redis_client.update_reservation(reservation_id, {"status": "Cancelled"})
+        logger.debug("Reservation %s cancelled", reservation_id)
+        return f"Reservation {reservation_id} cancelled successfully."
     except Exception as e:
         logger.error("Error in cancel_reservation_tool: %s", e)
         return "Error cancelling reservation."
@@ -342,20 +298,20 @@ async def reservation_status_tool(reservation_id: str) -> str:
     """Check the status of a reservation."""
     logger.debug("reservation_status_tool called with reservation_id: %s", reservation_id)
     try:
-        for reservation in RESTAURANT_DATA["reservations"]:
-            if reservation["reservation_id"] == reservation_id:
-                result = (
-                    f"Reservation {reservation_id}\n"
-                    f"Customer: {reservation['customer_name']}\n"
-                    f"Party Size: {reservation['party_size']}\n"
-                    f"Date: {reservation['date']}\n"
-                    f"Time: {reservation['time']}\n"
-                    f"Status: {reservation['status']}"
-                )
-                logger.debug("reservation_status_tool result: %s", result)
-                return result
-        logger.warning("Reservation %s not found", reservation_id)
-        return f"Reservation {reservation_id} not found."
+        reservation = redis_client.get_reservation(reservation_id)
+        if not reservation:
+            logger.warning("Reservation %s not found", reservation_id)
+            return f"Reservation {reservation_id} not found."
+        result = (
+            f"Reservation {reservation_id}\n"
+            f"Customer: {reservation['customer_name']}\n"
+            f"Party Size: {reservation['party_size']}\n"
+            f"Date: {reservation['date']}\n"
+            f"Time: {reservation['time']}\n"
+            f"Status: {reservation['status']}"
+        )
+        logger.debug("reservation_status_tool result: %s", result)
+        return result
     except Exception as e:
         logger.error("Error in reservation_status_tool: %s", e)
         return "Error retrieving reservation status."
@@ -554,7 +510,7 @@ def faq_instructions(
     run_context: RunContextWrapper[RestaurantAgentContext], agent: Agent[RestaurantAgentContext]
 ) -> str:
     """Instructions for FAQ agent."""
-    restaurant = RESTAURANT_DATA["restaurant"]
+    restaurant = redis_client.get_restaurant_info()
     contact_phone = restaurant["contact"]["phone"]
     contact_email = restaurant["contact"]["email"]
     # List of dynamic response templates
@@ -606,7 +562,7 @@ triage_agent = Agent[RestaurantAgentContext](
         "- For reservations (e.g., 'Book a table', 'Check reservation', 'Cancel reservation', 'Reserve a spot'): Reservation Agent\n"
         "- For offers or promotions (e.g., 'What are the deals?', 'Special offers', 'Offer list', 'Promotions', 'Discounts'): Offers Agent\n"
         "- For menu-related questions (e.g., 'What's on the menu?', 'Menu list', 'Show me the menu', 'Give me the menu list') or general restaurant info (e.g., 'Top selling product', 'Restaurant hours', 'What are your hours?', 'Where is the location?', 'Address', 'Contact details'): FAQ Agent\n"
-        f"If the intent is unclear or cannot be handled by any agent, respond with: 'I'm unable to assist with that request. For further assistance, please contact us at {RESTAURANT_DATA['restaurant']['contact']['phone']} or email {RESTAURANT_DATA['restaurant']['contact']['email']}.'\n"
+        f"If the intent is unclear or cannot be handled by any agent, respond with: 'I'm unable to assist with that request. For further assistance, please contact us at {redis_client.get_restaurant_info()['contact']['phone']} or email {redis_client.get_restaurant_info()['contact']['email']}.'"
     ),
     handoffs=[
         order_status_agent,
