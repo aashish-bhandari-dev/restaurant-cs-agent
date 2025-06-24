@@ -34,20 +34,27 @@ cp .env.example .env
 
 Install the dependencies for the backend by running the following commands:
 
-if you prefer poetry
+#### Using Poetry
 
 ```bash
 cd backend
 poetry install 
 ```
 
-if you prefer pip
+#### Using pip
 
 ```bash
 cd backend
 python -m venv .venv
 .venv\Scripts\activate  # Activate it (use source .venv/bin/activate on linux/macOS)
 pip install -r requirements.txt
+```
+
+#### Using Docker Compose
+
+```bash
+cd backend
+docker-compose up --build
 ```
 
 For the frontend, you can run:
@@ -59,7 +66,7 @@ npm install
 
 ### Running the app
 
-#### Run the backend
+#### Run the backend (without Docker)
 
 From the `backend` folder, run:
 
