@@ -7,87 +7,83 @@
 This repository contains a demo of a Customer Service Agent interface built on top of the [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/).
 It is composed of two parts:
 
-1. A python backend that handles the agent orchestration logic, implementing the Agents SDK [customer service example](https://github.com/openai/openai-agents-python/tree/main/examples/customer_service)
+1. A python backend that handles the agent orchestration logic, implementing the Agents SDK
 
-2. A Next.js UI allowing the visualization of the agent orchestration process and providing a chat interface.
+2. A Next.js frontend providing a chat interface.
 
 ## How to use
 
-### Setting your OpenAI API key
+### Setting your env
 
-You can set your OpenAI API key in your environment variables by running the following command in your terminal:
+You can set your environment variables by running the following command in your terminal:
 
 ```bash
 export OPENAI_API_KEY=your_api_key
+export REDIS_HOST=redis
+export REDIS_PORT=6379
+export REDIS_DB=2
 ```
 
-You can also follow [these instructions](https://platform.openai.com/docs/libraries#create-and-export-an-api-key) to set your OpenAI key at a global level.
+or:
 
-Alternatively, you can set the `OPENAI_API_KEY` environment variable in an `.env` file at the root of the `python-backend` folder. You will need to install the `python-dotenv` package to load the environment variables from the `.env` file.
+```bash
+cp .env.example .env
+```
 
 ### Install dependencies
 
 Install the dependencies for the backend by running the following commands:
 
-if you prefer pip
-
-```bash
-cd python-backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
 if you prefer poetry
 
 ```bash
-cd python-backend
+cd backend
 poetry install 
-poetry lock
 ```
 
-For the UI, you can run:
+if you prefer pip
 
 ```bash
-cd ui
+cd backend
+python -m venv .venv
+.venv\Scripts\activate  # Activate it (use source .venv/bin/activate on linux/macOS)
+pip install -r requirements.txt
+```
+
+For the frontend, you can run:
+
+```bash
+cd frontend
 npm install
 ```
 
-### Run the app
+### Running the app
 
-You can either run the backend independently if you want to use a separate UI, or run both the UI and backend at the same time.
+#### Run the backend
 
-#### Run the backend independently
-
-From the `python-backend` folder, run:
-
-```bash
-python -m uvicorn api:app --reload --port 8000
-```
-
-or :
+From the `backend` folder, run:
 
 ```bash
 poetry run uvicorn api:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+or :
+
+```bash
+python -m uvicorn api:app --reload --port 8000
+```
+
 The backend will be available at: [http://localhost:8000](http://localhost:8000)
 
-#### Run the UI & backend simultaneously
+#### Run the frontend
 
-From the `ui` folder, run:
+From the `frontend` folder, run:
 
 ```bash
 npm run dev
 ```
 
 The frontend will be available at: [http://localhost:3000](http://localhost:3000)
-
-This command will also start the backend.
-
-## Contributing
-
-You are welcome to open issues or submit PRs to improve this app, however, please note that we may not review all suggestions.
 
 ## License
 

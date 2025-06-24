@@ -3,9 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:next": "npx next dev",
-    "dev:server": "cd ../python-backend && .venv/bin/uvicorn api:app --reload --host 0.0.0.0 --port 8000",
-    "dev": "concurrently \"npm run dev:next\" \"npm run dev:server\"",
+    "dev": "npx next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
