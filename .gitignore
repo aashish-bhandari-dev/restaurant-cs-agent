@@ -130,6 +130,6 @@ dmypy.json
 #node modules
 node_modules/
 
-# ui stuff
+# frontend stuff
 
-ui/.next/
+frontend/.next/
