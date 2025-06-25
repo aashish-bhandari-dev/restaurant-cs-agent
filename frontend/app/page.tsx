@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Chat } from "@/components/Chat";
-import type { Agent, AgentEvent, GuardrailCheck, Message } from "@/lib/types";
+import type { Message } from "@/lib/types";
 import { callChatAPI } from "@/lib/api";
 
 export default function Home() {
@@ -15,11 +15,6 @@ export default function Home() {
       timestamp: new Date(),
     },
   ]);
-  const [events, setEvents] = useState<AgentEvent[]>([]);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [currentAgent, setCurrentAgent] = useState<string>("");
-  const [guardrails, setGuardrails] = useState<GuardrailCheck[]>([]);
-  const [context, setContext] = useState<Record<string, any>>({});
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -29,15 +24,10 @@ export default function Home() {
     (async () => {
       const data = await callChatAPI("", conversationId ?? "");
       setConversationId(data.conversation_id);
-      setCurrentAgent(data.current_agent);
-      setContext(data.context);
       const initialEvents = (data.events || []).map((e: any) => ({
         ...e,
         timestamp: e.timestamp ?? Date.now(),
       }));
-      setEvents(initialEvents);
-      setAgents(data.agents || []);
-      setGuardrails(data.guardrails || []);
       if (Array.isArray(data.messages) && data.messages.length > 0) {
         setMessages((prev) => [
           ...prev,
@@ -67,17 +57,6 @@ export default function Home() {
     const data = await callChatAPI(content, conversationId ?? "");
 
     if (!conversationId) setConversationId(data.conversation_id);
-    setCurrentAgent(data.current_agent);
-    setContext(data.context);
-    if (data.events) {
-      const stamped = data.events.map((e: any) => ({
-        ...e,
-        timestamp: e.timestamp ?? Date.now(),
-      }));
-      setEvents((prev) => [...prev, ...stamped]);
-    }
-    if (data.agents) setAgents(data.agents);
-    if (data.guardrails) setGuardrails(data.guardrails);
 
     if (data.messages) {
       const responses: Message[] = data.messages.map((m: any) => ({
@@ -114,7 +93,7 @@ export default function Home() {
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="2"
-              d="M8 12h8m-8 4h4m4-8H8m9-3H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2z"
+              d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"
             />
           </svg>
         </button>

@@ -7,14 +7,21 @@ import type { Agent, AgentEvent, GuardrailCheck, Message } from "@/lib/types";
 import { callChatAPI } from "@/lib/api";
 
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: Date.now().toString() + Math.random().toString(),
+      content: "How can I help you today?",
+      role: "assistant",
+      agent: "default",
+      timestamp: new Date(),
+    },
+  ]);
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [currentAgent, setCurrentAgent] = useState<string>("");
   const [guardrails, setGuardrails] = useState<GuardrailCheck[]>([]);
   const [context, setContext] = useState<Record<string, any>>({});
   const [conversationId, setConversationId] = useState<string | null>(null);
-  // Loading state while awaiting assistant response
   const [isLoading, setIsLoading] = useState(false);
 
   // Boot the conversation
@@ -32,15 +39,16 @@ export default function Home() {
       setAgents(data.agents || []);
       setGuardrails(data.guardrails || []);
       if (Array.isArray(data.messages)) {
-        setMessages(
-          data.messages.map((m: any) => ({
+        setMessages((prev) => [
+          ...prev,
+          ...data.messages.map((m: any) => ({
             id: Date.now().toString() + Math.random().toString(),
             content: m.content,
             role: "assistant",
             agent: m.agent,
             timestamp: new Date(),
-          }))
-        );
+          })),
+        ]);
       }
     })();
   }, []);
@@ -70,7 +78,6 @@ export default function Home() {
       setEvents((prev) => [...prev, ...stamped]);
     }
     if (data.agents) setAgents(data.agents);
-    // Update guardrails state
     if (data.guardrails) setGuardrails(data.guardrails);
 
     if (data.messages) {
