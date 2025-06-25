@@ -57,11 +57,22 @@ def create_initial_context() -> RestaurantAgentContext:
 # TOOLS
 # =========================
 
+# Category synonyms mapping for dynamic matching
+CATEGORY_SYNONYMS = {
+    "drinks": ["Beverages", "Drinks", "Beverage", "Drink"],
+    "beverages": ["Beverages", "Drinks", "Beverage", "Drink"],
+    "desserts": ["Desserts", "Sweets", "Dessert", "Sweet"],
+    "appetizers": ["Appetizers", "Starters", "Appetizer", "Starter"],
+    "main": ["Main Courses", "Entrees", "Mains", "Main Course", "Entree"],
+    "sides": ["Sides", "Side Dishes", "Side"],
+    "salads": ["Salads", "Salad"],
+}
+
 @function_tool(
     name_override="menu_lookup_tool", description_override="Lookup menu items, categories, or specific items."
 )
 async def menu_lookup_tool(query: str) -> str:
-    """Lookup menu items or categories based on query. Returns categories only if explicitly requested, full menu for generic queries, or specific items/categories for targeted queries."""
+    """Lookup menu items or categories based on query. Returns categories only if explicitly requested, full menu for generic queries, related categories for synonym matches, or specific items/categories for targeted queries."""
     logger.debug("menu_lookup_tool called with query: %s", query)
     q = query.lower().strip() if query else ""
     response = []
@@ -74,6 +85,24 @@ async def menu_lookup_tool(query: str) -> str:
             result = "\n".join(categories) if categories else "No menu categories available."
             logger.debug("menu_lookup_tool result: %s", result)
             return result
+
+        # Handle queries for related categories using synonyms
+        for synonym, category_names in CATEGORY_SYNONYMS.items():
+            if q in synonym or q in [name.lower() for name in category_names]:
+                logger.debug("Query '%s' matched synonym '%s' for categories: %s", q, synonym, category_names)
+                menu = redis_client.get_menu()
+                for category in menu["categories"]:
+                    if category["name"] in category_names:
+                        response.append(f"Category: {category['name']}")
+                        for item in category["items"]:
+                            response.append(
+                                f"- {item['name']} (ID: {item['id']}): {item['description']} "
+                                f"(${item['price']:.2f}) "
+                                f"[Vegetarian: {item['is_vegetarian']}, Gluten-Free: {item['is_gluten_free']}]"
+                            )
+                result = "\n".join(response) if response else f"No items found in the {synonym} category."
+                logger.debug("menu_lookup_tool result: %s", result)
+                return result
 
         # Handle generic queries like "menu", "menu list", or empty query
         if not q or q in ["menu", "menu list", "full menu", "list", "all"]:
@@ -110,7 +139,7 @@ async def menu_lookup_tool(query: str) -> str:
                             f"{item['description']} (${item['price']:.2f}) "
                             f"[Vegetarian: {item['is_vegetarian']}, Gluten-Free: {item['is_gluten_free']}]"
                         )
-        result = "\n".join(response) if response else "No matching menu items found for query: " + query
+        result = "\n".join(response) if response else f"No matching menu items or categories found for query: {query}. Try 'menu' for the full menu or contact us at {redis_client.get_restaurant_info()['contact']['phone']} for assistance."
         logger.debug("menu_lookup_tool result: %s", result)
         return result
     except Exception as e:
@@ -328,7 +357,7 @@ async def on_order_placement_handoff(context: RunContextWrapper[RestaurantAgentC
 
 async def on_reservation_handoff(context: RunContextWrapper[RestaurantAgentContext]) -> None:
     """Generate a reservation ID when handed off to the reservation agent."""
-    context.context.reservation_id = f"RES{random.randint(10000, 99999)}"
+    # context.context.reservation_id = f"RES{random.randint(10000, 99999)}"
     logger.debug("Reservation handoff: reservation_id=%s", context.context.reservation_id)
 
 # =========================
@@ -472,7 +501,7 @@ def reservation_instructions(
     return (
         f"{RECOMMENDED_PROMPT_PREFIX}\n"
         "You are a Reservation Agent. Use the following routine to support the customer:\n"
-        f"1. The customer's reservation ID is {reservation_id}. If not available, ask for their name, party size, date, and time to make a reservation, or reservation ID to check/cancel.\n"
+        f"1. If the customer's reservation ID ({reservation_id}) is not available, ask for their reservation ID first. If they don't have it, ask for their name, party size, date, and time to look up or make a reservation.\n"
         "2. Use the make_reservation_tool to create a new reservation, reservation_status_tool to check status, or cancel_reservation_tool to cancel an existing one.\n"
         "If the customer asks a question unrelated to reservations, transfer back to the triage agent."
     )
@@ -559,7 +588,7 @@ triage_agent = Agent[RestaurantAgentContext](
         "You are a helpful triaging agent. Analyze the customer's message to determine their intent and delegate to the appropriate agent:\n"
         "- For placing orders (e.g., 'I want to order...', 'Can I get a burger?', 'Place an order'): Order Placement Agent\n"
         "- For checking order status (e.g., 'Where is my order?', 'Order status', 'Track my order'): Order Status Agent\n"
-        "- For reservations (e.g., 'Book a table', 'Check reservation', 'Cancel reservation', 'Reserve a spot'): Reservation Agent\n"
+        "- For reservations, including making, checking, or canceling (e.g., 'Book a table', 'Check reservation', 'Cancel reservation', 'Reserve a spot', 'Reservation status', 'See reservation status'): Reservation Agent\n"
         "- For offers or promotions (e.g., 'What are the deals?', 'Special offers', 'Offer list', 'Promotions', 'Discounts'): Offers Agent\n"
         "- For menu-related questions (e.g., 'What's on the menu?', 'Menu list', 'Show me the menu', 'Give me the menu list') or general restaurant info (e.g., 'Top selling product', 'Restaurant hours', 'What are your hours?', 'Where is the location?', 'Address', 'Contact details'): FAQ Agent\n"
         f"If the intent is unclear or cannot be handled by any agent, respond with: 'I'm unable to assist with that request. For further assistance, please contact us at {redis_client.get_restaurant_info()['contact']['phone']} or email {redis_client.get_restaurant_info()['contact']['email']}.'"
