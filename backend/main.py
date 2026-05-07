@@ -7,6 +7,7 @@ from typing import List, Optional
 import os
 from datetime import datetime
 import logging
+import config.settings
 
 from agents import (
     Agent,
@@ -570,6 +571,22 @@ def faq_instructions(
         "If the customer asks a specific question about orders, reservations, or offers, transfer to the appropriate agent."
     )
 
+def triage_instructions(
+    run_context: RunContextWrapper[RestaurantAgentContext], agent: Agent[RestaurantAgentContext]
+) -> str:
+    """Instructions for triage agent."""
+    restaurant = redis_client.get_restaurant_info()
+    return (
+        f"{RECOMMENDED_PROMPT_PREFIX}\n"
+        "You are a helpful triaging agent. Analyze the customer's message to determine their intent and delegate to the appropriate agent:\n"
+        "- For placing orders (e.g., 'I want to order...', 'Can I get a burger?', 'Place an order'): Order Placement Agent\n"
+        "- For checking order status (e.g., 'Where is my order?', 'Order status', 'Track my order'): Order Status Agent\n"
+        "- For reservations, including making, checking, or canceling (e.g., 'Book a table', 'Check reservation', 'Cancel reservation', 'Reserve a spot', 'Reservation status', 'See reservation status'): Reservation Agent\n"
+        "- For offers or promotions (e.g., 'What are the deals?', 'Special offers', 'Offer list', 'Promotions', 'Discounts'): Offers Agent\n"
+        "- For menu-related questions (e.g., 'What's on the menu?', 'Menu list', 'Show me the menu', 'Give me the menu list') or general restaurant info (e.g., 'Top selling product', 'Restaurant hours', 'What are your hours?', 'Where is the location?', 'Address', 'Contact details'): FAQ Agent\n"
+        f"If the intent is unclear or cannot be handled by any agent, respond with: 'I'm unable to assist with that request. For further assistance, please contact us at {restaurant['contact']['phone']} or email {restaurant['contact']['email']}.'"
+    )
+
 faq_agent = Agent[RestaurantAgentContext](
     name="FAQ Agent",
     model="gpt-4.1",
@@ -583,16 +600,7 @@ triage_agent = Agent[RestaurantAgentContext](
     name="Triage Agent",
     model="gpt-4.1",
     handoff_description="A triage agent that delegates customer requests to the appropriate agent.",
-    instructions=(
-        f"{RECOMMENDED_PROMPT_PREFIX}\n"
-        "You are a helpful triaging agent. Analyze the customer's message to determine their intent and delegate to the appropriate agent:\n"
-        "- For placing orders (e.g., 'I want to order...', 'Can I get a burger?', 'Place an order'): Order Placement Agent\n"
-        "- For checking order status (e.g., 'Where is my order?', 'Order status', 'Track my order'): Order Status Agent\n"
-        "- For reservations, including making, checking, or canceling (e.g., 'Book a table', 'Check reservation', 'Cancel reservation', 'Reserve a spot', 'Reservation status', 'See reservation status'): Reservation Agent\n"
-        "- For offers or promotions (e.g., 'What are the deals?', 'Special offers', 'Offer list', 'Promotions', 'Discounts'): Offers Agent\n"
-        "- For menu-related questions (e.g., 'What's on the menu?', 'Menu list', 'Show me the menu', 'Give me the menu list') or general restaurant info (e.g., 'Top selling product', 'Restaurant hours', 'What are your hours?', 'Where is the location?', 'Address', 'Contact details'): FAQ Agent\n"
-        f"If the intent is unclear or cannot be handled by any agent, respond with: 'I'm unable to assist with that request. For further assistance, please contact us at {redis_client.get_restaurant_info()['contact']['phone']} or email {redis_client.get_restaurant_info()['contact']['email']}.'"
-    ),
+    instructions=triage_instructions,
     handoffs=[
         order_status_agent,
         handoff(agent=order_placement_agent, on_handoff=on_order_placement_handoff),

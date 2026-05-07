@@ -4,6 +4,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 import os
+import config.settings
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)

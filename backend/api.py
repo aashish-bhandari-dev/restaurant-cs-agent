@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+import config.settings
 from routes.chat import router as chat_router
 
 # Configure logging
